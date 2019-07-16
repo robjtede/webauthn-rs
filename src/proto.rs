@@ -135,7 +135,7 @@ pub(crate) struct PubKeyCredParams {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub(crate) struct AllowCredentials {
+pub(crate) struct CredentialDescriptor {
     #[serde(rename = "type")]
     pub(crate) type_: String,
     pub(crate) id: String,
@@ -151,7 +151,7 @@ struct PublicKeyCredentialCreationOptions {
     pubKeyCredParams: Vec<PubKeyCredParams>,
     timeout: u32,
     attestation: String,
-    // excludeCredentials
+    excludeCredentials: Vec<CredentialDescriptor>,
     // authenticatorSelection
     // See get_extensions for typing details here.
     // I suspect it's actually a map in json.
@@ -177,6 +177,7 @@ impl CreationChallengeResponse {
         challenge: String,
         pkcp: Vec<PubKeyCredParams>,
         timeout: u32,
+        excludeCredentials: Vec<CredentialDescriptor>,
         userVerificationPolicy: UserVerificationPolicy,
     ) -> CreationChallengeResponse {
         CreationChallengeResponse {
@@ -193,6 +194,7 @@ impl CreationChallengeResponse {
                 pubKeyCredParams: pkcp,
                 timeout: timeout,
                 attestation: "direct".to_string(),
+                excludeCredentials: excludeCredentials,
                 extensions: None,
                 userVerification: userVerificationPolicy.to_string(),
             },
@@ -205,7 +207,7 @@ pub(crate) struct PublicKeyCredentialRequestOptions {
     challenge: String,
     timeout: u32,
     rpId: String,
-    allowCredentials: Vec<AllowCredentials>,
+    allowCredentials: Vec<CredentialDescriptor>,
     userVerification: String,
     extensions: Option<JSONExtensions>,
 }
@@ -224,7 +226,7 @@ impl RequestChallengeResponse {
         challenge: String,
         timeout: u32,
         relaying_party: String,
-        allowCredentials: Vec<AllowCredentials>,
+        allowCredentials: Vec<CredentialDescriptor>,
         userVerificationPolicy: UserVerificationPolicy,
     ) -> Self {
         RequestChallengeResponse {

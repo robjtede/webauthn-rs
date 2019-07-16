@@ -13,7 +13,7 @@
 //! develop site specific policy and configuration, and the `Webauthn` struct for Webauthn
 //! interactions.
 
-// :( 
+// :(
 // #![feature(vec_remove_item)]
 
 #![warn(missing_docs)]
@@ -42,7 +42,7 @@ use crate::constants::{AUTHENTICATOR_TIMEOUT, CHALLENGE_SIZE_BYTES};
 use crate::crypto::{compute_sha256, COSEContentType};
 use crate::error::WebauthnError;
 use crate::proto::{
-    AllowCredentials, AuthenticatorAssertionResponse, AuthenticatorAttestationResponse, Challenge,
+    CredentialDescriptor, AuthenticatorAssertionResponse, AuthenticatorAttestationResponse, Challenge,
     CreationChallengeResponse, Credential, JSONExtensions, PubKeyCredParams, PublicKeyCredential,
     RegisterPublicKeyCredential, RequestChallengeResponse, UserId, UserVerificationPolicy,
 };
@@ -121,6 +121,17 @@ impl<T> Webauthn<T> {
     where
         T: WebauthnConfig,
     {
+        let ac = self
+            .config
+            .retrieve_credentials(&username)
+            .unwrap_or_default()
+            .iter()
+            .map(|cred| CredentialDescriptor {
+                type_: "public-key".to_string(),
+                id: base64::encode(cred.cred_id.as_slice()),
+            })
+            .collect::<Vec<_>>();
+
         let policy = self.config.policy_user_verification(&username);
         let chal = self.generate_challenge();
         let c = CreationChallengeResponse::new(
@@ -131,6 +142,7 @@ impl<T> Webauthn<T> {
             chal.to_string(),
             self.pkcp.clone(),
             self.config.get_authenticator_timeout(),
+            ac,
             policy,
         );
 
@@ -624,7 +636,7 @@ impl<T> Webauthn<T> {
         let ac = match uc {
             Some(creds) => creds
                 .iter()
-                .map(|cred| AllowCredentials {
+                .map(|cred| CredentialDescriptor {
                     type_: "public-key".to_string(),
                     id: base64::encode(cred.cred_id.as_slice()),
                 })
@@ -702,7 +714,7 @@ pub trait WebauthnConfig {
     fn persist_credential(&mut self, userid: UserId, credential: Credential) -> Result<(), ()>;
 
     /// Given a userId, retrieve the set of all Credentials that the UserId has associated.
-    fn retrieve_credentials(&self, userid: &UserId) -> Option<Vec<&Credential>>;
+    fn retrieve_credentials(&self, userid: &UserId) -> Option<Vec<Credential>>;
 
     /// Given a userId and Credential, update it's authentication counter to "counter". This
     /// helps to minimise threats from replay or reuse attacks by ensuring the counter is always
